@@ -4,3 +4,13 @@
 > 通过celery执行异步任务
 
 > 借助channels将计算结果通知到页面
+
+#### 启动
+0.  requirement
+> pip install -r requirements.txt
+1.  redis
+> docker run -p 6379:6379 -d redis:2.8
+2.  django
+> python manage.py runserver
+3.  celery
+> celery -A notifications worker -l info -c 3
