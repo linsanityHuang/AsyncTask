@@ -1,0 +1,128 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+	<title>Async Task</title>
+	<script type="text/javascript" charset="utf-8">
+
+	</script>
+	<script src="https://cdn.bootcss.com/jquery/3.4.0/jquery.min.js"></script>
+	<link rel="stylesheet" href="{% static 'layui/css/layui.css' %}"  media="all">
+</head>
+<body class="layui-layout-body">
+<div class="layui-layout layui-layout-admin">
+	<div class="layui-header">
+		<div class="layui-logo">异步任务: e^n</div>
+		<!-- 头部区域（可配合layui已有的水平导航） -->
+		<ul class="layui-nav layui-layout-right" id="layerDemo">
+			<li class="layui-nav-item">
+			</li>
+			<li class="layui-nav-item"><button data-method="notice" class="layui-btn">创建任务</button></li>
+		</ul>
+	</div>
+
+	<div class="layui-side layui-bg-black">
+		<div class="layui-side-scroll">
+			<!-- 左侧导航区域（可配合layui已有的垂直导航） -->
+			<ul class="layui-nav layui-nav-tree"  lay-filter="test">
+				<li class="layui-nav-item layui-nav-itemed">
+
+				</li>
+			</ul>
+		</div>
+	</div>
+
+	<div class="layui-body" id="layer_uq">
+		<fieldset class="layui-elem-field layui-field-title" style="margin-top: 30px;">
+			<legend>任务列表</legend>
+		</fieldset>
+		<ul class="layui-timeline">
+		</ul>
+	</div>
+
+	<!-- <div class="layui-footer">
+		底部固定区域
+		© layui.com - 底部固定区域
+	</div> -->
+</div>
+<script src="{% static 'layui/layui.js' %}"></script>
+
+<script>
+
+	var roomName = 'demo';
+	// 从数据库中获取正在执行中的任务
+	$.get('http://' + window.location.host + '/calc/calc_tasks/', function (data) {
+		console.log(data);
+		for (let i = 0; i < data.length; i++)
+		{
+			let flag = '';
+			if (data[i].result === 0)
+			{
+				flag = '';
+			}
+			item = '<li class="layui-timeline-item">' +
+            '<i class="layui-icon layui-anim layui-anim-rotate layui-anim-loop layui-timeline-axis">' + flag + '</i>' +
+            '<div class="layui-timeline-content layui-text">' +
+            '<div class="layui-timeline-title" id="'+ data[i].id +'">' + data[i].name + ': ' + data[i].result + '</div>' +
+            '</div>' +
+            '</li>';
+	        $('#layer_uq ul.layui-timeline').append(item)
+		}
+	});
+
+	var chatSocket = new WebSocket(
+        'ws://' + window.location.host +
+        '/ws/chat/' + roomName + '/');
+
+    chatSocket.onmessage = function(e) {
+        var data = JSON.parse(e.data);
+        console.log(data['message']);
+        let task = data['message'];
+		$('#'+ task['task_id']).html('task: '+ task['result']);
+		$('#'+ task['task_id']).parent().prev('i.layui-timeline-axis').html('')
+    };
+
+    chatSocket.onclose = function(e) {
+        console.error('Chat socket closed unexpectedly');
+    };
+
+	layui.use('layer', function(){ //独立版的layer无需执行这一句
+		var $ = layui.jquery, layer = layui.layer; //独立版的layer无需执行这一句
+
+		//触发事件
+		var active = {
+			notice: function(){
+				layer.prompt({title: '请输入一个指数', formType: 2}, function(text, index){
+					layer.close(index);
+					layer.msg('您写下了：'+text);
+					$.get('http://' + window.location.host + '/calc/create_task?power='+text, function (data) {
+						console.log(data);
+						console.log(data['code']);
+						if (data['code'] === 0) {
+							let task_id = data['task_id'];
+							item = '<li class="layui-timeline-item">' +
+				            '<i class="layui-icon layui-anim layui-anim-rotate layui-anim-loop layui-timeline-axis"></i>' +
+				            '<div class="layui-timeline-content layui-text">' +
+				            '<div class="layui-timeline-title" id="'+ task_id +'">' + data['task_name'] + '</div>' +
+				            '</div>' +
+				            '</li>';
+					        $('#layer_uq ul.layui-timeline').append(item)
+						}
+						else {
+							alert('任务创建失败')
+						}
+					})
+				});
+			}
+		};
+
+		$('#layerDemo .layui-btn').on('click', function(){
+			var othis = $(this), method = othis.data('method');
+			active[method] ? active[method].call(this, othis) : '';
+		});
+	});
+</script>
+</body>
+</html>
